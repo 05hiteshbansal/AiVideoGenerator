@@ -8,6 +8,7 @@ import { Button } from "@nextui-org/react";
 import axios from "axios";
 import { Video } from "remotion";
 import PlayerModel from "@/components/Player/Player";
+import Loading from "@/loading";
 const testdata={
     "image": [
         "https://res.cloudinary.com/dpc29aatx/image/upload/v1733413652/w3uib91w8a63fhzh4mo3.png",
@@ -544,9 +545,10 @@ const testdata={
 const page = () => {
   const [prompt, setPrompt] = useState([]);
   const [data,setData]=useState([]);
+  const [load,setLoad]=useState(false);
   const [open,setOpen]=useState(false);
   const [test, setTest] = useState({
-    image: [],
+    images: [],
     audioUrl: "",
     scripts:[],
   });
@@ -564,7 +566,7 @@ const page = () => {
 
   useEffect(() => {
     console.log("Final Data ->test state : ", test);
-    if(test.image.length>0){
+    if(test.images.length>0){
       setOpen(true);
     }
   }, [test]);
@@ -574,16 +576,13 @@ const page = () => {
   };
 
   const createScript = async () => {
-    console.log(prompt);
     const final = `write a script to generate ${prompt.Duration} s video on topic with complete sentences : ${prompt.value} along with AI image prompt in ${prompt.style} format for each scene and give me result on JSON formate with image prompt and content text as field`;
     try {
-
-
       const data=await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/script`,{prompt:final});
       //console.log("Data : ",data);
       
       // getting data Scripts
-      
+      setLoad(true);
       const userId=uuidv4();
       //console.log("User Id : ",userId);
       setId(userId);
@@ -642,7 +641,13 @@ const page = () => {
         );
 
         console.log("generateImage : ", generateImage.data.result);
+        if(generateImage.data.result!=null){
         images.push(generateImage.data.result);
+        }
+        else{
+            images.push("https://res.cloudinary.com/dpc29aatx/image/upload/v1733495210/bu8im2stk96srjyuuptd.png");
+        }
+        setLoad(false);
       });
   
       // Wait for all promises to resolve
@@ -651,7 +656,7 @@ const page = () => {
       // Update the state after all images are generated
 
       console.log("Images-> before : ", images);
-      setTest((prevTest) => ({ ...prevTest, "image": images }));
+      setTest((prevTest) => ({ ...prevTest, "images": images }));
       const saveImages=await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/saveImages`,{"images":images,id:id});
       console.log("Save Images ->after : ",saveImages);
     } catch (error) {
@@ -702,6 +707,9 @@ const page = () => {
     </div>
     {
     open && <PlayerModel data={test} open={open} setData={setTest} setOpen={setOpen}/>
+    }
+    {
+        load && <Loading load={load} />
     }
     </>
   );

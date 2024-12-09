@@ -1,12 +1,10 @@
 import connection from "@/dbconfig/connection";
-import UserProfile from "@/models/userProfile";
-import { getDataFromToken } from "@/utils/GetTokenData";
+import User from "@/model/user";
 import { NextResponse } from "next/server";
 connection();
 export async function GET(req) {
   try {
-    const userid=getDataFromToken(req)
-    const user = await UserProfile.findOne({ userid: userid });
+    const user = await User.findOne({ userid: "123" });
     user.password=undefined
       return NextResponse.json({
         message: "User information",

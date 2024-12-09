@@ -1,15 +1,14 @@
 import React from 'react'
 import { AbsoluteFill, Img, Sequence, useVideoConfig,Audio , useCurrentFrame, interpolate } from 'remotion'
-
-const VideoPlayer = ({scripts,image,audioUrl,setDurationValue, }) => {
+//import { downloadMedia } from "@remotion/lambda"; 
+const VideoPlayer = ({scripts,images,audioUrl,setDurationValue, }) => {
   
-//console.log(image);
+//console.log(images);
   const {fps}=useVideoConfig();
   const frame=useCurrentFrame();
   const getDuration=()=>{
-
-    setDurationValue(((scripts[scripts.length-1].end)/1000)*fps);
-    return scripts[scripts.length-1].end/1000*fps;
+    setDurationValue(((scripts[scripts.length-1].end)/1000)*fps+10);
+    return scripts[scripts.length-1].end/1000*fps+10;
   }
 
   const getCaption=()=>{
@@ -29,11 +28,11 @@ const VideoPlayer = ({scripts,image,audioUrl,setDurationValue, }) => {
   return (
     <div>
         <AbsoluteFill>
-        {image.map((img,index) => {
+        {images.map((img,index) => {
           
-          const startTime=(index*getDuration()/image.length);
+          const startTime=(index*getDuration()/images.length);
           const duration= scripts[scripts.length-1].end/1000*fps;
-          const idx=index%2==0?[1,1.8,1]:[1.8,1,1.8];
+          const idx=index%2==0?[1,1.8,1]:[2,1,2];
           const scale=interpolate(frame,[startTime,startTime+duration/2 ,startTime+duration],idx);
 
           return(
@@ -41,6 +40,7 @@ const VideoPlayer = ({scripts,image,audioUrl,setDurationValue, }) => {
             <Sequence key={index} from={startTime} durationInFrames={getDuration()} >
             <Img
               src={img}
+              id='download'
               style={{
                 width: '100%',
                 height: '100%',

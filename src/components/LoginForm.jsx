@@ -39,7 +39,7 @@ const LoginForm = () => {
         //console.log(result.error);
       } else {
         toast.success("user logged in successfully");
-        router.push("/targets");
+        router.push("/dashboard");
       }
      } catch (error) {
       console.log(error);
