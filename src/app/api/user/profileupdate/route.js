@@ -1,5 +1,4 @@
 import connection from "@/dbconfig/connection";
-import UserProfile from "@/models/userProfile";
 import { getDataFromToken } from "@/utils/GetTokenData";
 import { NextResponse } from "next/server";
 connection();
@@ -8,7 +7,7 @@ export async function POST(req) {
     const { userPhoto, location } = await req.json();
     const userid=getDataFromToken(req)
     console.log(userid);
-    const user = await UserProfile.findOne({ userid: userid });
+    const user = ""//await UserProfile.findOne({ userid: userid });
     if (user) {
       console.log(user , "Prev");
       user.location = location;

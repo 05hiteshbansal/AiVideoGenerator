@@ -10,15 +10,14 @@ export const metadata = {
 export default async function RootLayout({ children }) {
   const session = await getServerSession(authOption);
   return (
-    <div className="flex flex-col h-screen">
-        <Navbar />
-        <div className=" fixed mt-20">
-        <CollapeNavbar/>
-        </div>
-    <main className="flex-1 ml-0 md:ml-[20%] md:p-4 p-[5px] overflow-auto ">
+    <div className="flex h-screen flex-col">
+      <Navbar />
+      <div className="flex flex-1 pt-0 md:pt-0">
+        <CollapeNavbar />
+        <main className="flex-1 overflow-auto p-[5px] md:p-4">
           {children}
         </main>
+      </div>
     </div>
-     
   );
 }

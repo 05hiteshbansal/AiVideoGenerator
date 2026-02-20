@@ -4,13 +4,14 @@ import { signOut } from "next-auth/react";
 import { Toaster, toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+
 const Navbar = () => {
   const router = useRouter();
   const logout = async () => {
     try {
-      toast.loading("loading");
+      toast.loading("Logging out...");
       const data = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/user/logout`
+        `${process.env.NEXT_PUBLIC_API_URL}/api/user/logout`,
       );
       signOut({ callbackUrl: `${process.env.NEXT_PUBLIC_API_URL}` });
       toast.dismiss();
@@ -27,42 +28,39 @@ const Navbar = () => {
   };
 
   return (
-    <header className="text-gray-600 body-font">
+    <header className="sticky top-0 z-50 border-b border-slate-200/50 bg-white/80 backdrop-blur-md">
       <Toaster />
-      <div className="container mx-auto flex flex-wrap p-5 flex-row justify-between items-center">
-        <a className="flex title-font font-medium items-center text-gray-900 ml-[26px] md:ml-0  md:mb-0">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="w-10 h-10 text-white p-2 bg-indigo-500 rounded-full"
-            viewBox="0 0 24 24"
-          >
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-          </svg>
-          <span className="ml-3 text-xl">Dashboard</span>
-        </a>
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+          <a href="/dashboard" className="flex items-center gap-3 group">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 text-white font-bold">
+              ✨
+            </div>
+            <span className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              ShortsAI
+            </span>
+          </a>
 
-        <button
-          className="inline-flex items-center bg-gray-100 border-0 py-1 px-3 focus:outline-none hover:bg-gray-200 rounded text-base  md:mt-0"
-          onClick={logout}
-        >
-          Logout
-          <svg
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="w-4 h-4 ml-1"
-            viewBox="0 0 24 24"
+          {/* Right Actions */}
+          <button
+            onClick={logout}
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-2.5 font-semibold text-slate-900 transition-all hover:from-purple-100 hover:to-pink-100 hover:shadow-md border border-slate-200/50"
           >
-            <path d="M5 12h14M12 5l7 7-7 7"></path>
-          </svg>
-        </button>
+            <span>Logout</span>
+            <svg
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+            >
+              <path d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
   );

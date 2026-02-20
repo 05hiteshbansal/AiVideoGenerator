@@ -11,18 +11,16 @@ export async function POST(req) {
     try {
       connection();
         const {text,id}=await req.json();
-        console.log(text);
+       // console.log(text);
    
         const request = {
             input: {text: text},
-            // Select the language and SSML voice gender (optional)
-            voice: {languageCode: 'en-US', ssmlGender: 'FEMALE'},   
-            // select the type of audio encoding
+            voice: {languageCode: 'en-US', ssmlGender: 'SSML_VOICE_GENDER_UNSPECIFIED'},   
             audioConfig: {audioEncoding: 'MP3'},
           };
 
         const [response] = await client.synthesizeSpeech(request);
-  // Write the binary audio content to a local file
+
 
   cloudinary.config({ 
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
@@ -30,14 +28,13 @@ export async function POST(req) {
     api_secret: process.env.CLOUDINARY_API_SECRET
 });  
 
-// Upload an audio`file
 const audioBuffer=Buffer.from(response.audioContent,'binary');
 
 
 const uploadAudioToCloudinary = async (buffer) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: 'video' }, // Use 'video' for audio files
+      { resource_type: 'video' }, 
       (error, result) => {
         if (error) {
           reject(error);
@@ -56,14 +53,10 @@ const uploadAudioToCloudinary = async (buffer) => {
 };
 
 const result = await uploadAudioToCloudinary(audioBuffer);
-//console.log('Upload Result:', result);
-
-
 const newVideo= await new Video({ id: id,audioUrl:result.secure_url });
   await newVideo.save();
 return NextResponse.json({ status: 500 , success:"success",url:result.secure_url });        
     }
-
    catch (error) {
     return NextResponse.json({ message: error.message, status: 500 , success:false });
   }
