@@ -1,9 +1,10 @@
 "use client";
-import React, { useState } from "react";
-import { Button } from "@nextui-org/react";
+import React, { useState, useEffect } from "react";
+import { Button, Spinner } from "@nextui-org/react";
 import StudioContainer from "./StudioContainer";
+import { useDropdownConfig } from "@/hooks/useDropdownConfig";
 
-const dummyLibrary = [
+const defaultAudioLibrary = [
   {
     id: "calm",
     name: "Calm Background",
@@ -34,6 +35,14 @@ const ModernAudioStudio = ({
   onBack,
 }) => {
   const [uploadFileName, setUploadFileName] = useState("");
+  const { config, loading: configLoading } = useDropdownConfig();
+  const [audioLibrary, setAudioLibrary] = useState(defaultAudioLibrary);
+
+  useEffect(() => {
+    if (config?.audioLibrary && config.audioLibrary.length > 0) {
+      setAudioLibrary(config.audioLibrary);
+    }
+  }, [config]);
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
@@ -53,7 +62,7 @@ const ModernAudioStudio = ({
         </p>
         <p className="text-center text-xs text-slate-600">
           {selectedId
-            ? `Selected: ${dummyLibrary.find((t) => t.id === selectedId)?.name || "Custom Audio"}`
+            ? `Selected: ${audioLibrary.find((t) => t.id === selectedId)?.name || "Custom Audio"}`
             : "Choose or upload audio"}
         </p>
 
@@ -98,7 +107,7 @@ const ModernAudioStudio = ({
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            {dummyLibrary.map((track) => (
+            {audioLibrary.map((track) => (
               <button
                 key={track.id}
                 onClick={() => onSelectFromLibrary(track)}

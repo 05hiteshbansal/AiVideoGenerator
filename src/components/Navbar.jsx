@@ -4,6 +4,7 @@ import { signOut } from "next-auth/react";
 import { Toaster, toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import Link from "next/link";
 
 const Navbar = () => {
   const router = useRouter();
@@ -43,23 +44,32 @@ const Navbar = () => {
           </a>
 
           {/* Right Actions */}
-          <button
-            onClick={logout}
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-2.5 font-semibold text-slate-900 transition-all hover:from-purple-100 hover:to-pink-100 hover:shadow-md border border-slate-200/50"
-          >
-            <span>Logout</span>
-            <svg
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4"
-              viewBox="0 0 24 24"
+          <div className="flex items-center gap-3">
+            <Link
+              href="/settings"
+              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2.5 font-semibold text-slate-900 transition-all hover:from-slate-100 hover:to-slate-200 hover:shadow-md border border-slate-200/50"
             >
-              <path d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
-            </svg>
-          </button>
+              <span>⚙️</span>
+              <span>Settings</span>
+            </Link>
+            <button
+              onClick={logout}
+              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-2.5 font-semibold text-slate-900 transition-all hover:from-purple-100 hover:to-pink-100 hover:shadow-md border border-slate-200/50"
+            >
+              <span>Logout</span>
+              <svg
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+              >
+                <path d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </header>

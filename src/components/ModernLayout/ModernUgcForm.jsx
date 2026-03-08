@@ -5,25 +5,70 @@ import Image from "next/image";
 import ImageUpload from "@/components/ImageUpload";
 import DropdownOptions from "@/components/NewOptions/DropdownOptions";
 import DurationOption from "@/components/NewOptions/DurationOption";
+import { useDropdownConfig } from "@/hooks/useDropdownConfig";
 
-// Avatar library
-const avatarLibrary = [
+const visualFocusOptions = [
   {
-    id: "avatar1",
-    url: "https://res.cloudinary.com/dpc29aatx/image/upload/v1733495210/bu8im2stk96srjyuuptd.png",
-    name: "Friendly Creator",
+    key: "avatar",
+    title: "Avatar Focus",
+    description:
+      "Let the creator lead the frame while keeping the product present.",
+    icon: "👤",
   },
   {
-    id: "avatar2",
-    url: "https://res.cloudinary.com/dpc29aatx/image/upload/v1733495210/bu8im2stk96srjyuuptd.png",
-    name: "Professional",
+    key: "product",
+    title: "Product Focus",
+    description:
+      "Zoom the product as the hero while the avatar reacts in support.",
+    icon: "🎯",
   },
   {
-    id: "avatar3",
-    url: "https://res.cloudinary.com/dpc29aatx/image/upload/v1733495210/bu8im2stk96srjyuuptd.png",
-    name: "Casual",
+    key: "interaction",
+    title: "Interaction",
+    description: "Show both avatar and product interacting naturally.",
+    icon: "🤝",
   },
 ];
+
+const SectionBadge = ({ number, color = "indigo" }) => {
+  const colors = {
+    indigo: "bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200/50",
+    blue: "bg-blue-50 text-blue-600 ring-1 ring-blue-200/50",
+    emerald: "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200/50",
+  };
+  return (
+    <span
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-bold shadow-sm ${colors[color]}`}
+    >
+      {number}
+    </span>
+  );
+};
+
+const Card = ({ children, className = "" }) => (
+  <div
+    className={`glass-card rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-0.5 ${className}`}
+  >
+    {children}
+  </div>
+);
+
+const PageHeader = ({ badge, title, description }) => (
+  <header className="mb-10 animate-fade-in">
+    <div className="flex flex-col gap-2">
+      <span className="inline-flex w-fit items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-600 ring-1 ring-indigo-100">
+        <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+        {badge}
+      </span>
+      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 mt-1">
+        {title}
+      </h1>
+      <p className="text-slate-500 max-w-2xl text-sm md:text-base leading-relaxed">
+        {description}
+      </p>
+    </div>
+  </header>
+);
 
 const ModernUgcForm = ({
   ugcConfig,
@@ -35,6 +80,13 @@ const ModernUgcForm = ({
 }) => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingPrimary, setUploadingPrimary] = useState(false);
+  const { config } = useDropdownConfig();
+
+  const avatarLibrary =
+    config?.avatarLibrary && config.avatarLibrary.length > 0
+      ? config.avatarLibrary
+      : [];
+  const currentFocus = ugcConfig.visualFocus || "interaction";
 
   const handleAvatarUpload = async (event) => {
     try {
@@ -42,7 +94,7 @@ const ModernUgcForm = ({
       const uploadedUrl = await ImageUpload(event);
       onUgcConfigChange((prev) => ({
         ...prev,
-        avatarImage: uploadedUrl,
+        avatarImages: [...prev.avatarImages, uploadedUrl],
       }));
     } catch (error) {
       console.error("Avatar upload failed:", error);
@@ -57,7 +109,7 @@ const ModernUgcForm = ({
       const uploadedUrl = await ImageUpload(event);
       onUgcConfigChange((prev) => ({
         ...prev,
-        primaryImage: uploadedUrl,
+        primaryImages: [...prev.primaryImages, uploadedUrl],
       }));
     } catch (error) {
       console.error("Primary image upload failed:", error);
@@ -69,244 +121,328 @@ const ModernUgcForm = ({
   const handleSelectAvatar = (avatar) => {
     onUgcConfigChange((prev) => ({
       ...prev,
-      avatarImage: avatar.url,
+      avatarImages: prev.avatarImages.includes(avatar.url)
+        ? prev.avatarImages.filter((img) => img !== avatar.url)
+        : [...prev.avatarImages, avatar.url],
     }));
   };
 
   const handleSelectPrimaryImage = (image) => {
     onUgcConfigChange((prev) => ({
       ...prev,
-      primaryImage: image.url,
+      primaryImages: prev.primaryImages.includes(image.url)
+        ? prev.primaryImages.filter((img) => img !== image.url)
+        : [...prev.primaryImages, image.url],
+    }));
+  };
+
+  const removeAvatarImage = (imageUrl) => {
+    onUgcConfigChange((prev) => ({
+      ...prev,
+      avatarImages: prev.avatarImages.filter((img) => img !== imageUrl),
+    }));
+  };
+
+  const removePrimaryImage = (imageUrl) => {
+    onUgcConfigChange((prev) => ({
+      ...prev,
+      primaryImages: prev.primaryImages.filter((img) => img !== imageUrl),
     }));
   };
 
   return (
-    <div className="m-5 rounded-2xl bg-white p-5 shadow-lg md:m-8 md:p-8">
-      <div className="mx-auto max-w-4xl space-y-8">
-        <header className="flex flex-col gap-2 border-b border-slate-200 pb-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-purple-500">
-            User-Generated Content
-          </p>
-          <h1 className="font-sans text-2xl font-semibold text-slate-900 md:text-3xl">
-            Create UGC Advertisement
-          </h1>
-          <p className="text-sm text-slate-500 md:text-base">
-            Upload or select images, then generate authentic user-generated
-            style ad content.
-          </p>
-        </header>
+    <div className="min-h-screen bg-[#f8faff] p-4 md:p-10 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      <div className="mx-auto max-w-7xl animate-fade-in">
+        <PageHeader
+          badge="AI UGC Studio 3.0"
+          title="Create Product Advertisement"
+          description="Leverage high-end AI agents to transform your product images into viral-ready UGC content with professional scripts and cinematic visuals."
+        />
 
-        {/* Grid Layout */}
-        <div className="grid gap-8 md:grid-cols-2">
-          {/* Left Column - Image Selection */}
-          <div className="space-y-6">
-            {/* Avatar Section */}
-            <div className="space-y-4 rounded-2xl bg-purple-50/70 p-4">
-              <div>
-                <h2 className="text-lg font-semibold text-purple-900">
-                  Avatar Selection
-                </h2>
-                <p className="mt-1 text-xs text-purple-800/80">
-                  Choose or upload an avatar image
-                </p>
-              </div>
+        <div className="grid gap-10 lg:grid-cols-12">
+          {/* 🚀 MAIN FORM AREA (8/12) */}
+          <div className="lg:col-span-8 space-y-10">
 
-              {/* Avatar Preview */}
-              <div className="flex items-center gap-3">
-                {ugcConfig.avatarImage && (
-                  <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-purple-300">
-                    <Image
-                      src={ugcConfig.avatarImage}
-                      alt="Avatar"
-                      fill
-                      className="object-cover"
-                    />
+            {/* STEP 1 & 2: VISUAL ASSETS */}
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Creator Selection */}
+              <div className="glass-card rounded-2xl bg-white/50 p-6 ring-1 ring-slate-200/50 hover:ring-indigo-300 transition-all">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <SectionBadge number="1" color="indigo" />
+                      <h2 className="text-sm font-bold text-slate-900 uppercase tracking-tight">
+                        Creator / Avatar
+                      </h2>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Define the persona in your ad
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2.5 py-1 rounded-lg ring-1 ring-indigo-100 uppercase tracking-wider">
+                    {ugcConfig.avatarImages.length} Ready
+                  </span>
+                </div>
+
+                {/* Previews */}
+                {ugcConfig.avatarImages.length > 0 && (
+                  <div className="mb-6 flex flex-wrap gap-3">
+                    {ugcConfig.avatarImages.map((imageUrl, index) => (
+                      <div
+                        key={index}
+                        className="group relative h-16 w-16 overflow-hidden rounded-2xl border-2 border-white shadow-xl shadow-indigo-500/10"
+                      >
+                        <Image src={imageUrl} alt="Avatar" fill className="object-cover" />
+                        <button
+                          onClick={() => removeAvatarImage(imageUrl)}
+                          className="absolute inset-0 flex items-center justify-center bg-indigo-600/60 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-[2px]"
+                        >
+                          <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
-                <label className="cursor-pointer rounded-lg border border-purple-300 bg-white px-4 py-2 text-xs font-medium text-purple-700 hover:bg-purple-50">
-                  {uploadingAvatar ? "Uploading..." : "Choose File"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarUpload}
-                    disabled={uploadingAvatar}
-                  />
+
+                <label className={`group mb-6 flex h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 transition-all hover:border-indigo-400 hover:bg-white active:scale-[0.98] ${uploadingAvatar ? "pointer-events-none opacity-60" : ""}`}>
+                  {uploadingAvatar ? (
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
+                  ) : (
+                    <>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-indigo-600 shadow-sm ring-1 ring-slate-100 group-hover:scale-110 transition-transform">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Upload New</span>
+                    </>
+                  )}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
                 </label>
+
+                {avatarLibrary.length > 0 && (
+                  <div>
+                    <p className="mb-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Library</p>
+                    <div className="flex flex-wrap gap-3">
+                      {avatarLibrary.slice(0, 8).map((avatar) => {
+                        const isSelected = ugcConfig.avatarImages.includes(avatar.url);
+                        return (
+                          <button
+                            key={avatar.id}
+                            onClick={() => handleSelectAvatar(avatar)}
+                            className={`group relative h-12 w-12 overflow-hidden rounded-xl transition-all ${isSelected ? "ring-2 ring-indigo-600 ring-offset-2 scale-95 shadow-lg" : "ring-1 ring-slate-200 hover:scale-110"}`}
+                          >
+                            <Image src={avatar.url} alt={avatar.name} fill className="object-cover" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Avatar Library */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-purple-900">
-                  Select from Library
+              {/* Product Visual */}
+              <div className="glass-card rounded-2xl bg-white/50 p-6 ring-1 ring-slate-200/50 hover:ring-blue-300 transition-all">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <SectionBadge number="2" color="blue" />
+                      <h2 className="text-sm font-bold text-slate-900 uppercase tracking-tight">
+                        Product Assets
+                      </h2>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Select your hero product shots
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2.5 py-1 rounded-lg ring-1 ring-blue-100 uppercase tracking-wider">
+                    {ugcConfig.primaryImages.length} Ready
+                  </span>
+                </div>
+
+                <label className={`group mb-6 flex h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 transition-all hover:border-blue-400 hover:bg-white active:scale-[0.98] ${uploadingPrimary ? "pointer-events-none opacity-60" : ""}`}>
+                  {uploadingPrimary ? (
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+                  ) : (
+                    <>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-100 group-hover:scale-110 transition-transform">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Add Media</span>
+                    </>
+                  )}
+                  <input type="file" accept="image/*" className="hidden" onChange={handlePrimaryImageUpload} />
                 </label>
-                <div className="flex gap-2">
-                  {avatarLibrary.map((avatar) => (
-                    <button
-                      key={avatar.id}
-                      type="button"
-                      onClick={() => handleSelectAvatar(avatar)}
-                      className={`relative h-16 w-16 overflow-hidden rounded-full border-2 transition ${
-                        ugcConfig.avatarImage === avatar.url
-                          ? "border-purple-600 ring-2 ring-purple-200"
-                          : "border-purple-200 hover:border-purple-400"
-                      }`}
-                    >
-                      <Image
-                        src={avatar.url}
-                        alt={avatar.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </button>
-                  ))}
+
+                {ugcConfig.primaryImages.length > 0 && (
+                  <div className="flex flex-wrap gap-3">
+                    {ugcConfig.primaryImages.map((imageUrl, index) => (
+                      <div
+                        key={index}
+                        className="group relative h-16 w-20 overflow-hidden rounded-xl border-2 border-white shadow-xl shadow-blue-500/10"
+                      >
+                        <Image src={imageUrl} alt="Product" fill className="object-cover" />
+                        <button
+                          onClick={() => removePrimaryImage(imageUrl)}
+                          className="absolute inset-0 flex items-center justify-center bg-blue-600/60 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-[2px]"
+                        >
+                          <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* STEP 3: CONTENT CONTEXT */}
+            <div className="glass-card rounded-3xl bg-white p-8 space-y-8">
+              <div className="flex items-center gap-4">
+                <SectionBadge number="3" color="indigo" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 tracking-tight">Campaign Intelligence</h2>
+                  <p className="text-sm text-slate-500">Provide high-level context for the AI agents</p>
+                </div>
+              </div>
+
+              <div className="grid gap-8 md:grid-cols-2">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Engagement Style</label>
+                    <DropdownOptions onUserSelect={onSelectionChange} dropdownfield={"styles"} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Video Duration</label>
+                    <DurationOption onUserSelect={onSelectionChange} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Creative Directive</label>
+                  <textarea
+                    rows={6}
+                    className="form-input resize-none"
+                    placeholder="E.g., Highlight the natural ingredients and the instant glow. Keep the tone enthusiastic and relatable..."
+                    value={prompt?.ugcPrompt || ""}
+                    onChange={(e) => onSelectionChange("ugcPrompt", e.target.value)}
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Primary Image Section */}
-            <div className="space-y-4 rounded-2xl bg-blue-50/70 p-4">
-              <div>
-                <h2 className="text-lg font-semibold text-blue-900">
-                  Primary Visual
-                </h2>
-                <p className="mt-1 text-xs text-blue-800/80">
-                  Upload or select the main product image
-                </p>
-              </div>
-
-              {/* Primary Image Preview */}
-              <div className="flex items-center gap-3">
-                {ugcConfig.primaryImage && (
-                  <div className="relative h-24 w-32 overflow-hidden rounded-lg border-2 border-blue-300">
-                    <Image
-                      src={ugcConfig.primaryImage}
-                      alt="Primary visual"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
-                <label className="cursor-pointer rounded-lg border border-blue-300 bg-white px-4 py-2 text-xs font-medium text-blue-700 hover:bg-blue-50">
-                  {uploadingPrimary ? "Uploading..." : "Choose File"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handlePrimaryImageUpload}
-                    disabled={uploadingPrimary}
-                  />
-                </label>
-              </div>
-
-              {/* Primary Image Library */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-blue-900">
-                  Select from Library
-                </label>
-                <div className="flex gap-2">
-                  {avatarLibrary.map((image) => (
-                    <button
-                      key={image.id}
-                      type="button"
-                      onClick={() => handleSelectPrimaryImage(image)}
-                      className={`relative h-16 w-20 overflow-hidden rounded-lg border-2 transition ${
-                        ugcConfig.primaryImage === image.url
-                          ? "border-blue-600 ring-2 ring-blue-200"
-                          : "border-blue-200 hover:border-blue-400"
-                      }`}
-                    >
-                      <Image
-                        src={image.url}
-                        alt={image.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </button>
-                  ))}
+            {/* STEP 4: VISUAL SETTINGS */}
+            <div className="glass-card rounded-3xl bg-white p-8">
+              <div className="flex items-center gap-4 mb-8">
+                <SectionBadge number="4" color="blue" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 tracking-tight">Visual Prioritization</h2>
+                  <p className="text-sm text-slate-500">How should the AI frame the scenes?</p>
                 </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                {visualFocusOptions.map((option) => {
+                  const isActive = currentFocus === option.key;
+                  return (
+                    <button
+                      key={option.key}
+                      onClick={() => onUgcConfigChange((prev) => ({ ...prev, visualFocus: option.key }))}
+                      className={`group relative flex flex-col items-center text-center p-6 rounded-2xl border-2 transition-all duration-200 ${isActive
+                        ? "border-indigo-600 bg-indigo-50/50 shadow-lg shadow-indigo-100"
+                        : "border-slate-100 bg-slate-50/30 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                    >
+                      <span className="text-3xl mb-3 group-hover:scale-125 transition-transform">{option.icon}</span>
+                      <h3 className={`text-sm font-bold mb-1 ${isActive ? "text-indigo-900" : "text-slate-800"}`}>{option.title}</h3>
+                      <p className="text-[11px] text-slate-500 leading-relaxed font-medium">{option.description}</p>
+                      {isActive && <div className="absolute top-3 right-3 h-4 w-4 rounded-full bg-indigo-600 flex items-center justify-center"><svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg></div>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* Right Column - Content Options */}
-          <div className="space-y-6">
-            {/* Content Section */}
-            <div className="rounded-2xl bg-white/60 backdrop-blur-sm border border-slate-200/50 p-6 shadow-lg">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-sm font-bold text-purple-600">
-                    1
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900">
-                      Content Topic
-                    </h2>
-                    <p className="text-xs text-slate-600">
-                      What is your product about?
-                    </p>
-                  </div>
+          {/* 🎯 SIDEBAR ACTIONS (4/12) */}
+          <div className="lg:col-span-4 space-y-8 animate-fade-in delay-100">
+            {/* AGENT SELECTOR */}
+            <div className="glass-card rounded-3xl p-8 bg-indigo-600 text-white border-0 shadow-2xl shadow-indigo-500/30">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </div>
-                <DropdownOptions onUserSelect={onSelectionChange} />
+                <h2 className="text-lg font-bold tracking-tight">AI Engine Stack</h2>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-indigo-100 uppercase tracking-widest">Image Generation</label>
+                  <DropdownOptions onUserSelect={(f, v) => onUgcConfigChange(p => ({ ...p, imageModel: v }))} dropdownfield={"imageModels"} />
+                </div>
+                <div className="space-y-2 border-t border-white/10 pt-6">
+                  <label className="text-[10px] font-black text-indigo-100 uppercase tracking-widest">Video Synthesis (Kling)</label>
+                  <DropdownOptions onUserSelect={(f, v) => onUgcConfigChange(p => ({ ...p, videoModel: v }))} dropdownfield={"videoModels"} />
+                </div>
               </div>
             </div>
 
-            {/* Prompt Section */}
-            <div className="rounded-2xl bg-white/60 backdrop-blur-sm border border-slate-200/50 p-6 shadow-lg">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-sm font-bold text-purple-600">
-                    2
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900">
-                      Custom Prompt
-                    </h2>
-                    <p className="text-xs text-slate-600">
-                      Describe your UGC video focus
-                    </p>
+            {/* PRODUCT METADATA */}
+            <div className="glass-card rounded-3xl p-8 bg-white space-y-6 shadow-xl shadow-slate-200/50">
+              <div className="flex items-center gap-3 mb-2">
+                <SectionBadge number="5" color="emerald" />
+                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Core Metadata</h2>
+              </div>
+
+              <div className="space-y-5">
+                {[
+                  { key: "product", label: "Product Identity", placeholder: "e.g. Aura Smart Watch" },
+                  { key: "productType", label: "Category", placeholder: "e.g. Wearables" },
+                  { key: "targetAudience", label: "Audience Persona", placeholder: "e.g. Fitness Enthusiasts" },
+                  { key: "environment", label: "Visual Setting", placeholder: "e.g. Vibrant Gym" },
+                ].map(({ key, label, placeholder }) => (
+                  <div key={key} className="space-y-1.5">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{label}</label>
+                    <input
+                      type="text"
+                      className="form-input placeholder:opacity-50"
+                      placeholder={placeholder}
+                      value={ugcConfig[key] || ""}
+                      onChange={(e) => onUgcConfigChange(prev => ({ ...prev, [key]: e.target.value }))}
+                    />
                   </div>
-                </div>
-                <textarea
-                  rows={4}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
-                  placeholder="E.g., Show how the product solves a common problem. Make it feel natural and authentic..."
-                  value={prompt?.ugcPrompt || ""}
-                  onChange={(e) =>
-                    onSelectionChange("ugcPrompt", e.target.value)
-                  }
-                />
+                ))}
               </div>
             </div>
 
-            {/* Duration Section */}
-            <div className="rounded-2xl bg-white/60 backdrop-blur-sm border border-slate-200/50 p-6 shadow-lg">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-sm font-bold text-purple-600">
-                    3
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900">
-                      Duration
-                    </h2>
-                    <p className="text-xs text-slate-600">
-                      Video length preference
-                    </p>
-                  </div>
+            {/* SUBMIT BUTTON */}
+            <div className="pt-2">
+              <button
+                onClick={onSubmit}
+                disabled={isLoading || ugcConfig.avatarImages.length === 0}
+                className="btn-primary w-full h-16 text-lg tracking-tight shadow-2xl relative group overflow-hidden"
+              >
+                <span className="flex items-center gap-3 relative z-10">
+                  {isLoading ? (
+                    <><span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Optimizing Content...</>
+                  ) : (
+                    <><svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 0 0-1.788 0l-7 14a1 1 0 0 0 1.169 1.409l5-1.429A1 1 0 0 0 9 15.571V11a1 1 0 1 1 2 0v4.571a1 1 0 0 0 .725.962l5 1.428a1 1 0 0 0 1.17-1.408l-7-14Z" /></svg> Launch Production</>
+                  )}
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-700 to-violet-700 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+              {ugcConfig.avatarImages.length === 0 && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  Assets required to proceed
                 </div>
-                <DurationOption onUserSelect={onSelectionChange} />
-              </div>
+              )}
             </div>
-
-            {/* Submit Button */}
-            <Button
-              onPress={onSubmit}
-              disabled={isLoading || !ugcConfig.avatarImage}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-6 text-lg font-semibold text-white rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 disabled:opacity-50"
-            >
-              {isLoading ? "Generating Script..." : "Generate Script & Scenes"}
-            </Button>
           </div>
         </div>
       </div>

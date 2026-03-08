@@ -37,7 +37,7 @@ const NewVideoPage = () => {
 
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/script`,
-        { prompt: finalPrompt },
+        { prompt: basePrompt, type: "new" },
       );
 
       const userId = uuidv4();
@@ -87,7 +87,9 @@ const NewVideoPage = () => {
             },
           );
 
-          const result = generateImageResponse.data?.result;
+          const result =
+            generateImageResponse.data?.imageUrl ||
+            generateImageResponse.data?.result;
 
           return {
             ...scene,

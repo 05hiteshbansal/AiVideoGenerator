@@ -7,12 +7,26 @@ import Loading from "@/loading";
 import ModernUgcForm from "@/components/ModernLayout/ModernUgcForm";
 import ModernUgcSceneStudio from "@/components/ModernLayout/ModernUgcSceneStudio";
 import ModernUgcAudioStudio from "@/components/ModernLayout/ModernUgcAudioStudio";
+import VariationSelector from "@/components/NewOptions/VariationSelector";
+import userGeneratedPrompt from "@/components/constants/UGCPrompt";
+import { downloadScriptPDF } from "@/utils/pdfExport";
+import { Button } from "@nextui-org/react";
+import { useContentFilter } from "@/hooks/useContentFilter";
+import { toast, Toaster } from "react-hot-toast";
 
 const UgcPage = () => {
-  const [step, setStep] = useState("form"); // form | studio | audio | preview
+  const [step, setStep] = useState("form"); // form | variations | studio | audio | preview
   const [prompt, setPrompt] = useState({});
   const [data, setData] = useState({ message: [] });
   const [isLoading, setIsLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const { validateFields, getErrorMessage, filterEnabled, config, mounted } =
+    useContentFilter();
+
+  // Prevent hydration errors
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [videoData, setVideoData] = useState({
     images: [],
@@ -22,10 +36,17 @@ const UgcPage = () => {
   });
 
   const [ugcConfig, setUgcConfig] = useState({
-    avatarImage: "",
+    avatarImages: [],
     avatarDescription: "",
-    primaryImage: "",
+    primaryImages: [],
     primaryImageDescription: "",
+    visualFocus: "interaction",
+    product: "",
+    productType: "",
+    targetAudience: "",
+    environment: "",
+    imageModel: "",
+    videoModel: "",
   });
 
   const [scenes, setScenes] = useState([]);
@@ -33,54 +54,237 @@ const UgcPage = () => {
   const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
   const [selectedAudioId, setSelectedAudioId] = useState("");
   const [id, setId] = useState(0);
+  const [scriptVariations, setScriptVariations] = useState(null);
+  const [selectedVariation, setSelectedVariation] = useState(null);
 
   const handleSelectionChange = (key, value) => {
     setPrompt((previous) => ({ ...previous, [key]: value }));
   };
 
   const createScript = async () => {
+    console.log("Creating script with config:", { prompt, ugcConfig });
+
+    // Content filtering validation
+    if (filterEnabled && config) {
+      const fieldsToValidate = {
+        "Product Name": ugcConfig.product,
+        "Product Type": ugcConfig.productType,
+        "Avatar Description": ugcConfig.avatarDescription,
+        "Primary Image Description": ugcConfig.primaryImageDescription,
+        "Target Audience": ugcConfig.targetAudience,
+        Environment: ugcConfig.environment,
+        "Custom Prompt": prompt.ugcPrompt,
+        Topic: prompt.value,
+      };
+
+      const validation = validateFields(fieldsToValidate);
+
+      if (!validation.isValid) {
+        const blockedField = validation.blockedFields[0];
+        const errorMsg = `🚫 ${blockedField.field}: ${getErrorMessage(blockedField.keywords)}`;
+
+        toast.error(errorMsg, {
+          duration: 5000,
+          position: "top-center",
+          style: {
+            background: "#FEE2E2",
+            color: "#991B1B",
+            border: "2px solid #DC2626",
+            padding: "16px",
+            fontSize: "14px",
+            fontWeight: "600",
+          },
+          icon: "🚫",
+        });
+
+        return; // Stop execution
+      }
+
+      // Show success if validation passed
+      toast.success("✓ Content validation passed", {
+        duration: 2000,
+        position: "top-right",
+      });
+    }
+
     const {
-      avatarImage,
+      avatarImages,
       avatarDescription,
-      primaryImage,
+      primaryImages,
       primaryImageDescription,
+      product,
+      productType,
+      targetAudience,
+      environment,
+      visualFocus,
     } = ugcConfig;
 
-    const basePrompt = `write a script to generate ${prompt.Duration} s advertisement video on topic with complete sentences: ${prompt.value} along with AI image prompt in ${prompt.style} format for each scene and give me result in JSON format with image_prompt and content_text as fields`;
+    // Build a more contextual base prompt
+    const productInfo = product || prompt.value || "the product";
+    const customDescription = prompt.ugcPrompt || "";
+    const duration = prompt.Duration || "30";
 
-    const userGeneratedPrompt = `You are a creative director generating a user-generated content (UGC) advertisement video.
+    const basePrompt = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎬 VIDEO SCRIPT REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Avatar image: ${avatarImage ? "User has uploaded/selected an avatar image" : "No avatar image provided"}
-Avatar description: ${avatarDescription || "a generic friendly brand avatar"}
-Primary visual image: ${primaryImage ? "User has uploaded/selected a primary product image" : "No primary image provided"}
-Primary visual description: ${primaryImageDescription || "a relevant product image"}
+Duration: ${duration} seconds
+Product/Topic: "${productInfo}"
+${customDescription ? `Additional Context: ${customDescription}` : ""}
 
-Using these elements, ${basePrompt}. Make sure scenes feel like authentic UGC ad creatives that naturally feature the avatar and primary visual in engaging, relatable ways. Each scene should feel like real user content, not overly polished corporate ads.`;
+📋 SCENE STRUCTURE (Follow this flow):
 
+1. HOOK (First 2-3 seconds)
+   - Grab attention immediately with a problem, question, or bold statement
+   - Show product prominently or tease the transformation
+   - Example: "I was struggling with [problem] until I found this..."
+
+2. INTRODUCTION (Next 3-5 seconds)
+   - Introduce the product by name: "${productInfo}"
+   - Brief context about what it is
+   - Personal connection or discovery story
+
+3. DEMONSTRATION (Middle 10-15 seconds)
+   - Show the product in use
+   - Highlight 2-3 key features or benefits
+   - Make it visual and tangible
+   - Use before/after or step-by-step if relevant
+
+4. RESULTS/PROOF (Next 5-8 seconds)
+   - Show the transformation or outcome
+   - Personal testimonial about results
+   - Close-up of results or happy reaction
+
+5. CALL-TO-ACTION (Final 3-5 seconds)
+   - Direct but natural CTA
+   - Sense of urgency or exclusivity
+   - Where to get it/what to do next
+   - End with enthusiasm
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📤 OUTPUT FORMAT (STRICT REQUIREMENT)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Return ONLY a valid JSON array with NO markdown formatting.
+Each scene object must have:
+{
+  "image_prompt": "[Detailed visual description: Include product name '${productInfo}', creator action, environment '${environment || "appropriate setting"}', lighting type, camera angle, 9:16 aspect ratio, UGC smartphone style]",
+  "content_text": "[Natural, conversational voiceover text that mentions the product and connects emotionally with ${targetAudience || "viewers"}. First-person perspective. One complete sentence or short phrase.]"
+}
+
+⚠️ IMPORTANT: 
+- NO markdown code blocks (no \`\`\`json)
+- NO explanatory text outside the JSON
+- Start directly with [ and end with ]
+- Each scene should be 5-10 seconds of content
+- Total scenes should fit within ${duration} seconds
+`;
+
+    const UGCPrompt = userGeneratedPrompt(
+      avatarImages,
+      avatarDescription,
+      primaryImages,
+      primaryImageDescription,
+      basePrompt,
+      visualFocus,
+      product,
+      productType,
+      targetAudience,
+      environment,
+      config?.negativePrompt || "",
+      config?.contentGuardrails || "",
+    );
     try {
       setIsLoading(true);
 
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/script`,
-        { prompt: userGeneratedPrompt },
+        {
+          prompt: {
+            productName: product || "the product",
+            productDescription: prompt.ugcPrompt || "",
+            brandName: prompt.brandName || "Brand",
+            productType,
+            targetAudience,
+            environment,
+            videoStyle: prompt.styles || "realistic",
+            imageModel: ugcConfig.imageModel,
+            videoModel: ugcConfig.videoModel,
+          },
+          type: "ugc",
+          generateVariations: true, // Request all 3 variations
+        },
       );
 
       const userId = uuidv4();
       setId(userId);
-      setData(response.data);
-      console.log(response.data);
-      const scenesFromScript = (response.data.message || []).map(
-        (scene, index) => ({
-          id: index,
-          contentText: scene.content_text,
-          imagePrompt: scene.image_prompt,
-          imageUrl: "",
-          videoUrl: "", // Will be filled when Kling generates videos
-        }),
-      );
 
-      setScenes(scenesFromScript);
-      setStep("studio");
+      // Check if we got variations
+      if (response.data.hasVariations) {
+        setScriptVariations(response.data.message);
+        setStep("variations");
+      } else {
+        // Fallback to old behavior
+        setData(response.data);
+        const scenesFromScript = (response.data.message || []).map(
+          (scene, index) => ({
+            id: index,
+            contentText: scene.content_text,
+            imagePrompt: scene.image_prompt,
+            imageUrl: "",
+            videoUrl: "",
+          }),
+        );
+        setScenes(scenesFromScript);
+        setStep("studio");
+      }
+    } catch (error) {
+      console.error("Error creating script:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectVariation = (variationType) => {
+    setSelectedVariation(variationType);
+  };
+
+  const handleContinueWithVariation = () => {
+    if (!selectedVariation || !scriptVariations) return;
+
+    const variation = scriptVariations[selectedVariation];
+    const scenesFromScript = variation.scenes.map((scene, index) => ({
+      id: index,
+      contentText: scene.content_text,
+      imagePrompt: scene.image_prompt,
+      imageUrl: "",
+      videoUrl: "",
+      emotion: scene.emotion,
+    }));
+
+    setScenes(scenesFromScript);
+    setData({ message: variation.scenes });
+    setStep("studio");
+  };
+
+  const handleDownloadPDF = () => {
+    if (!scriptVariations) return;
+
+    const productInfo = {
+      productName: prompt.value || "Product",
+      brandName: prompt.brandName || "Brand",
+      productDescription: prompt.productDescription || "",
+    };
+
+    downloadScriptPDF(scriptVariations, productInfo);
+  };
+
+  const handleBackFromVariations = async () => {
+    try {
+      setScriptVariations(null);
+      setSelectedVariation(null);
+      setStep("form");
     } catch (error) {
       console.error("Error creating script:", error);
     } finally {
@@ -107,10 +311,19 @@ Using these elements, ${basePrompt}. Make sure scenes feel like authentic UGC ad
             {
               prompt: scene.imagePrompt,
               id,
+              avatarImages: ugcConfig.avatarImages,
+              primaryImages: ugcConfig.primaryImages,
+              visualFocus: ugcConfig.visualFocus,
+              avatarDescription: ugcConfig.avatarDescription,
+              primaryImageDescription: ugcConfig.primaryImageDescription,
+              productName: ugcConfig.product,
+              imageModel: ugcConfig.imageModel,
             },
           );
 
-          const result = generateImageResponse.data?.result;
+          const result =
+            generateImageResponse.data?.imageUrl ||
+            generateImageResponse.data?.result;
 
           return {
             ...scene,
@@ -149,27 +362,40 @@ Using these elements, ${basePrompt}. Make sure scenes feel like authentic UGC ad
   };
 
   const generateVideosWithKling = async () => {
+    if (ugcConfig.videoModel !== "kling") {
+      console.log("Kling not selected as video model, skipping AI video synthesis.");
+      return;
+    }
+
     try {
       setIsGeneratingVideos(true);
+      toast.loading("🎬 Synthesizing cinematic videos with Kling AI...", { id: "kling-status" });
 
-      // TODO: Replace with actual Kling 3.0 API integration
-      // For now, this is a placeholder that simulates video generation
-      const videoPromises = scenes.map(async (scene, index) => {
-        // Placeholder: In real implementation, call Kling API
-        // const klingResponse = await axios.post(
-        //   `${process.env.NEXT_PUBLIC_API_URL}/api/kling/generate`,
-        //   {
-        //     sceneId: scene.id,
-        //     imageUrl: scene.imageUrl,
-        //     contentText: scene.contentText,
-        //     id,
-        //   }
-        // );
-        // return klingResponse.data.videoUrl;
+      const videoPromises = scenes.map(async (scene) => {
+        // Collect relevant images for the multi-image-to-video prompt
+        const imagesForKling = [scene.imageUrl];
 
-        // Simulated delay
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (index + 1)));
-        return `https://example.com/kling-video-${scene.id}.mp4`;
+        if (ugcConfig.avatarImages?.[0]) imagesForKling.push(ugcConfig.avatarImages[0]);
+        if (ugcConfig.primaryImages?.[0]) imagesForKling.push(ugcConfig.primaryImages[0]);
+
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/kling/generate`,
+          {
+            images: imagesForKling,
+            prompt: scene.imagePrompt,
+            options: {
+              duration: "5",
+              aspect_ratio: "9:16",
+              mode: "pro"
+            }
+          }
+        );
+
+        if (response.data.success) {
+          return response.data.videoUrl;
+        } else {
+          throw new Error(response.data.message || "Failed to generate video");
+        }
       });
 
       const videoUrls = await Promise.all(videoPromises);
@@ -185,8 +411,11 @@ Using these elements, ${basePrompt}. Make sure scenes feel like authentic UGC ad
         ...previous,
         videoUrls,
       }));
+
+      toast.success("✨ Cinematic videos generated successfully!", { id: "kling-status" });
     } catch (error) {
       console.error("Error generating videos with Kling:", error);
+      toast.error(`❌ Kling Error: ${error.message}`, { id: "kling-status" });
     } finally {
       setIsGeneratingVideos(false);
     }
@@ -295,6 +524,7 @@ Using these elements, ${basePrompt}. Make sure scenes feel like authentic UGC ad
 
   return (
     <>
+      {isMounted && <Toaster position="top-center" reverseOrder={false} />}
       {step === "form" && (
         <ModernUgcForm
           ugcConfig={ugcConfig}
@@ -304,6 +534,40 @@ Using these elements, ${basePrompt}. Make sure scenes feel like authentic UGC ad
           isLoading={isLoading}
           onSubmit={createScript}
         />
+      )}
+
+      {step === "variations" && scriptVariations && (
+        <div className="m-5 rounded-2xl bg-white p-5 shadow-lg md:m-8 md:p-8">
+          <div className="mx-auto max-w-6xl space-y-6">
+            <VariationSelector
+              variations={scriptVariations}
+              selectedVariation={selectedVariation}
+              onSelectVariation={handleSelectVariation}
+            />
+
+            <div className="flex justify-center gap-4 pt-6 border-t border-slate-200">
+              <Button variant="bordered" onPress={handleBackFromVariations}>
+                ← Back to Form
+              </Button>
+              <Button
+                variant="flat"
+                color="secondary"
+                onPress={handleDownloadPDF}
+              >
+                📄 Download All Scripts (PDF)
+              </Button>
+              <Button
+                color="primary"
+                size="lg"
+                onPress={handleContinueWithVariation}
+                isDisabled={!selectedVariation}
+                className="px-8"
+              >
+                Continue with Selected →
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {step === "studio" && (

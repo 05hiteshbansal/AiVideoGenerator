@@ -4,7 +4,8 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-export async function generateStory(promptTopic) {
+export async function generateUGCVideo(productName, productDescription, brandName, additionalContext = {}) {
+  const { productType, targetAudience, environment, videoStyle } = additionalContext;
   try {
     const response = await ai.models.generateContent({
         model: "gemini-2.0-flash",
@@ -20,19 +21,25 @@ export async function generateStory(promptTopic) {
           parts: [
             {
               text: `
-Create a viral cinematic historical short about "${promptTopic}".
+STRICTLY generate a viral UGC script JSON for:
+PRODUCT: ${productName} (${brandName})
+TYPE: ${productType || "N/A"}
+DESCRIPTION: ${productDescription}
+AUDIENCE: ${targetAudience || "General"}
+SETTING: ${environment || "Lived-in space"}
 
 DIRECTIVES:
-- Hook -> Drama -> Emotional Payoff
-- Maintain historical accuracy
-- Image_prompt: Detailed visual, setting, lighting, 9:16 cinematic
-- Narrator: Powerful short lines (max 20 words)
+- Hook -> Problem -> Solution -> CTA
+- REQUIRED: Every scene must feature the product/brand mentioned.
+- VISUAL MIX: Use Intimate Close-ups, Low Angles, Side Views, and POC shots.
+- IMAGE_PROMPT: 9:16, ${videoStyle || "Cinematic UGC"}, Hyper-realistic 8K, [Angle], [Emotional Expression], [Action], rich background detail in ${environment || "setting"}.
+- CONSISTENCY: Exact same avatar & product design. Zero text overlays.
 
 OUTPUT (JSON array only):
 [
   {
     "image_prompt": "Cinematic visual description",
-    "content_text": "Narration text"
+    "content_text": "Spoken line (max 18 words)"
   }
 ]
 `,
@@ -43,12 +50,8 @@ OUTPUT (JSON array only):
     });
 
     const rawText = response?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) throw new Error("No text returned");
 
-    if (!rawText) {
-      throw new Error("No text returned from Gemini");
-    }
-
-    // 🔥 Clean potential accidental markdown wrapping or conversational text
     let cleanedText = rawText.trim();
     const jsonStart = cleanedText.indexOf('[');
     const jsonEnd = cleanedText.lastIndexOf(']');
@@ -59,29 +62,21 @@ OUTPUT (JSON array only):
       cleanedText = cleanedText.replace(/```json|```/g, "").trim();
     }
 
-    // 🔥 Parse JSON safely
-    let parsed;
-    try {
-      parsed = JSON.parse(cleanedText);
-    } catch (parseError) {
-      console.error("Invalid JSON returned:", cleanedText);
-      throw new Error("Model returned invalid JSON format");
-    }
+    const parsed = JSON.parse(cleanedText);
 
-    // 🔥 Basic validation
     if (!Array.isArray(parsed)) {
       throw new Error("Response is not a JSON array");
     }
 
     parsed.forEach((scene, index) => {
       if (!scene.image_prompt || !scene.content_text) {
-        throw new Error(`Invalid scene structure at index ${index}`);
+        throw new Error(`Invalid structure at index ${index}`);
       }
     });
 
     return parsed;
   } catch (error) {
-    console.error("Gemini Story Generation Error:", error);
+    console.error("UGC Generation Error:", error);
     throw error;
   }
 }

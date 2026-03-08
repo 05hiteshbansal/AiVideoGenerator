@@ -1,9 +1,10 @@
 "use client";
-import React, { useState } from "react";
-import { Button } from "@nextui-org/react";
+import React, { useState, useEffect } from "react";
+import { Button, Spinner } from "@nextui-org/react";
 import StudioContainer from "./StudioContainer";
+import { useDropdownConfig } from "@/hooks/useDropdownConfig";
 
-const audioLibrary = [
+const defaultAudioLibrary = [
   {
     id: "calm",
     name: "Calm Background",
@@ -39,6 +40,14 @@ const ModernUgcAudioStudio = ({
   onFinish,
 }) => {
   const [uploadFileName, setUploadFileName] = useState("");
+  const { config, loading: configLoading } = useDropdownConfig();
+  const [audioLibrary, setAudioLibrary] = useState(defaultAudioLibrary);
+
+  useEffect(() => {
+    if (config?.ugcAudioLibrary && config.ugcAudioLibrary.length > 0) {
+      setAudioLibrary(config.ugcAudioLibrary);
+    }
+  }, [config]);
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
